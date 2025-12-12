@@ -19,8 +19,11 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-# Copy installed deps from builder (no bloat)
+# Copy installed deps from builder (site-packages)
 COPY --from=builder /install /usr/local/lib/python3.12/site-packages
+
+# Fixed: Copy executables (gunicorn scripts) from builder bin
+COPY --from=builder /usr/local/bin /usr/local/bin
 
 # Copy app code (light)
 COPY . .
