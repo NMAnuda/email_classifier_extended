@@ -1,11 +1,15 @@
-Flask
-uvicorn[standard]
-google-api-python-client
-google-auth-httplib2
-google-auth-oauthlib
-joblib
-scikit-learn
-numpy
-SQLAlchemy
-pydantic
-python-multipart
+flask==3.0.3
+flask-cors==4.0.0
+flask-socketio==5.3.6
+google-api-python-client==2.108.0
+google-auth-oauthlib==1.1.0
+google-auth-httplib2==0.1.1
+openai==1.3.7
+transformers==4.35.0
+torch==2.1.0
+nltk==3.8.1
+sqlalchemy==2.0.23
+requests==2.31.0
+python-dotenv==1.0.0
+gunicorn==21.2.0  # New: Prod server
+eventlet==0.33.3  # For SocketIO
