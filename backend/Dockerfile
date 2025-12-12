@@ -25,8 +25,8 @@ COPY --from=builder /install /usr/local/lib/python3.12/site-packages
 # Copy executables from builder (bin dir)
 COPY --from=builder /usr/local/bin /usr/local/bin
 
-# Fixed: Install gunicorn in final stage (ensures full runtime + PATH)
-RUN pip install --no-cache-dir gunicorn==21.2.0 && chmod +x /usr/local/bin/gunicorn
+# Fixed: Install gunicorn in final stage (ensures full runtime + PATH; no chmod needed—pip sets +x)
+RUN pip install --no-cache-dir gunicorn==21.2.0
 
 # Copy app code (light)
 COPY . .
