@@ -10,7 +10,8 @@ RUN apt-get update && apt-get install -y \
 
 # Copy & install deps (heavy stuff here)
 COPY requirements.txt .
-ENV PIP_INDEX_URL=https://download.pytorch.org/whl/cpu  # CPU-only for torch
+# CPU-only for torch (avoids GPU bloat)
+ENV PIP_INDEX_URL=https://download.pytorch.org/whl/cpu
 RUN pip install --no-cache-dir --target=/install -r requirements.txt
 
 # Final slim stage
@@ -24,7 +25,7 @@ COPY --from=builder /install /usr/local/lib/python3.12/site-packages
 # Copy app code (light)
 COPY . .
 
-# Cleanup optional: Pre-download models if needed (reduces runtime)
+# Optional: Pre-download models to speed startup (reduces runtime size)
 RUN python -c "from transformers import pipeline; pipeline('zero-shot-classification', model='facebook/bart-large-mnli')"
 
 EXPOSE 8000
