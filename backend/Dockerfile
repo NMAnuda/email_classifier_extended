@@ -25,9 +25,6 @@ COPY --from=builder /install /usr/local/lib/python3.12/site-packages
 # Copy executables from builder (bin dir)
 COPY --from=builder /usr/local/bin /usr/local/bin
 
-# Fixed: Install gunicorn in final stage (ensures executable in PATH)
-RUN pip install --no-cache-dir gunicorn==21.2.0
-
 # Copy app code (light)
 COPY . .
 
@@ -36,5 +33,5 @@ RUN python -c "from transformers import pipeline; pipeline('zero-shot-classifica
 
 EXPOSE 8000
 
-# Prod CMD (gunicorn now available)
-CMD ["gunicorn", "-w 4", "-b 0.0.0.0:8000", "app.main:app"]
+# Fixed: Full path to gunicorn (ensures executable in container)
+CMD ["/usr/local/bin/gunicorn", "-w 4", "-b 0.0.0.0:8000", "app.main:app"]
