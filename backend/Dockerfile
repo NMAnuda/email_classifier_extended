@@ -22,8 +22,11 @@ WORKDIR /app
 # Copy installed deps from builder (site-packages)
 COPY --from=builder /install /usr/local/lib/python3.12/site-packages
 
-# Fixed: Copy executables (gunicorn scripts) from builder bin
+# Copy executables from builder (bin dir)
 COPY --from=builder /usr/local/bin /usr/local/bin
+
+# Fixed: Install gunicorn in final stage (ensures executable in PATH)
+RUN pip install --no-cache-dir gunicorn==21.2.0
 
 # Copy app code (light)
 COPY . .
@@ -33,5 +36,5 @@ RUN python -c "from transformers import pipeline; pipeline('zero-shot-classifica
 
 EXPOSE 8000
 
-# Prod CMD
+# Prod CMD (gunicorn now available)
 CMD ["gunicorn", "-w 4", "-b 0.0.0.0:8000", "app.main:app"]
