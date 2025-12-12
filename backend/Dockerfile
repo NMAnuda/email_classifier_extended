@@ -10,8 +10,8 @@ RUN apt-get update && apt-get install -y \
 
 # Copy & install deps (heavy stuff here)
 COPY requirements.txt .
-# CPU-only for torch (avoids GPU bloat)
-ENV PIP_INDEX_URL=https://download.pytorch.org/whl/cpu
+# CPU-only for torch (as extra index—falls back to PyPI for other deps)
+ENV PIP_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cpu
 RUN pip install --no-cache-dir --target=/install -r requirements.txt
 
 # Final slim stage
