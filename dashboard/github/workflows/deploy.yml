@@ -1,0 +1,69 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Backend tests
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install backend deps
+        run: |
+          cd backend
+          pip install -r requirements.txt
+      - name: Run backend tests
+        run: |
+          cd backend
+          python -m pytest  # Add pytest to requirements.txt if needed
+
+      # Frontend tests
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install frontend deps
+        run: |
+          cd dashboard  # Adjust if 'frontend/'
+          npm ci
+      - name: Run frontend tests
+        run: |
+          cd dashboard
+          npm test  # Or npm run lint
+
+  deploy-backend:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy Backend to Railway
+        uses: dyc3/deploy-to-railway@v1  # Railway deploy action
+        with:
+          railway-token: ${{ secrets.RAILWAY_TOKEN }}
+          service-id: ${{ secrets.RAILWAY_BACKEND_SERVICE_ID }}
+          project-id: ${{ secrets.RAILWAY_PROJECT_ID }}
+
+  deploy-frontend:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy Frontend to Railway
+        uses: dyc3/deploy-to-railway@v1
+        with:
+          railway-token: ${{ secrets.RAILWAY_TOKEN }}
+          service-id: ${{ secrets.RAILWAY_FRONTEND_SERVICE_ID }}
+          project-id: ${{ secrets.RAILWAY_PROJECT_ID }}

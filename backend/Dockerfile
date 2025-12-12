@@ -1,16 +1,15 @@
-FROM python:3.11-slim
+FROM python:3.12-slim
 
 WORKDIR /app
 
-# copy backend code
-COPY . /app
+RUN apt-get update && apt-get install -y gcc && rm -rf /var/lib/apt/lists/*
 
-# install dependencies
-RUN pip install --upgrade pip
-RUN pip install -r requirements.txt
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Expose port
+COPY . .
+
 EXPOSE 8000
 
-# run Flask app
-CMD ["python", "-m", "flask", "--app", "app.main:app", "run", "--host", "0.0.0.0", "--port", "8000"]
+# Prod: Use gunicorn for multi-worker
+CMD ["gunicorn", "-w 4", "-b 0.0.0.0:8000", "app.main:app"]
