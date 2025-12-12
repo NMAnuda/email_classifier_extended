@@ -1,0 +1,29 @@
+# Python cache files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environment
+venv/
+env/
+.env
+credentials.json
+token.json
+venv/
+__pycache__/
+dataset/
+
+# Token or credentials files
+token.json
+token.pickle
+credentials.json
+
+# VS Code settings
+.vscode/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+dataset

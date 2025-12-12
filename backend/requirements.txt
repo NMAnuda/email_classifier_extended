@@ -1,0 +1,11 @@
+Flask
+uvicorn[standard]
+google-api-python-client
+google-auth-httplib2
+google-auth-oauthlib
+joblib
+scikit-learn
+numpy
+SQLAlchemy
+pydantic
+python-multipart
