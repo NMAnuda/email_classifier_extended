@@ -1,4 +1,10 @@
 # =====================
+# Git / editor
+# =====================
+.git
+.vscode
+
+# =====================
 # Python cache
 # =====================
 __pycache__/
@@ -7,35 +13,24 @@ __pycache__/
 *.pyd
 
 # =====================
-# Virtual environments
+# Virtual envs
 # =====================
 venv/
 env/
 .venv/
 
 # =====================
-# Environment variables
+# Secrets (CRITICAL)
 # =====================
 .env
 .env.*
-
-# =====================
-# Credentials / tokens
-# =====================
 credentials.json
 token.json
 token.pickle
 *.pickle
 
 # =====================
-# Editor / OS
-# =====================
-.vscode/
-.DS_Store
-Thumbs.db
-
-# =====================
-# Data / artifacts
+# Local data
 # =====================
 dataset/
 data/

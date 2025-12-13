@@ -1,35 +1,65 @@
 import os
+import json
 import pickle
 import base64
 import re
 from typing import List, Dict, Tuple
 
 from googleapiclient.discovery import build
+from google.oauth2.credentials import Credentials  # New: For prod env JSON
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 
-# Paths
-TOKEN_PATH = os.path.join(os.path.dirname(__file__), "token.pickle")
-CREDENTIALS_PATH = os.path.join(os.path.dirname(__file__), "..", "routers", "credentials.json")
+# Env mode (dev/prod)
+ENV = os.getenv("ENV", "dev")
 
-# Scopes (good for real-time + send)
-SCOPES = ['https://www.googleapis.com/auth/gmail.readonly', 'https://www.googleapis.com/auth/gmail.send']
+# Scopes
+SCOPES = [
+    'https://www.googleapis.com/auth/gmail.readonly',
+    'https://www.googleapis.com/auth/gmail.send'
+]
 
 def get_gmail_service():
     creds = None
-    if os.path.exists(TOKEN_PATH):
-        with open(TOKEN_PATH, "rb") as f:
-            creds = pickle.load(f)
 
-    if not creds or not getattr(creds, "valid", False):
-        if creds and getattr(creds, "expired", False) and getattr(creds, "refresh_token", None):
+    if ENV == "prod":
+        # 🔐 Prod: Use pre-authorized user JSON from env (no browser, no files)
+        authorized_json = os.getenv("GOOGLE_AUTHORIZED_USER_JSON")
+        if not authorized_json:
+            raise RuntimeError("GOOGLE_AUTHORIZED_USER_JSON not set in prod. Generate locally & upload as env var.")
+
+        creds = Credentials.from_authorized_user_info(
+            json.loads(authorized_json),
+            scopes=SCOPES
+        )
+
+        if creds.expired and creds.refresh_token:
             creds.refresh(Request())
-        else:
-            flow = InstalledAppFlow.from_client_secrets_file(CREDENTIALS_PATH, SCOPES)
-            creds = flow.run_local_server(port=0)
 
-        with open(TOKEN_PATH, "wb") as f:
-            pickle.dump(creds, f)
+    else:
+        # 🧪 Local dev: OAuth flow + files
+        TOKEN_PATH = os.path.join(os.path.dirname(__file__), "token.pickle")
+        CREDENTIALS_PATH = os.getenv('GOOGLE_CREDENTIALS_JSON', os.path.join(os.path.dirname(__file__), "..", "routers", "credentials.json"))
+
+        # Check credentials exist
+        if not os.path.exists(CREDENTIALS_PATH):
+            raise FileNotFoundError(f"Credentials not found at {CREDENTIALS_PATH}. Download from Google Cloud.")
+
+        if os.path.exists(TOKEN_PATH):
+            with open(TOKEN_PATH, "rb") as f:
+                creds = pickle.load(f)
+
+        if not creds or not getattr(creds, "valid", False):
+            if creds and getattr(creds, "expired", False) and getattr(creds, "refresh_token", None):
+                creds.refresh(Request())
+            else:
+                flow = InstalledAppFlow.from_client_secrets_file(CREDENTIALS_PATH, SCOPES)
+                creds = flow.run_local_server(port=0)  # Browser prompt (local only)
+
+            # Save token (local only)
+            os.makedirs(os.path.dirname(TOKEN_PATH), exist_ok=True)
+            with open(TOKEN_PATH, "wb") as f:
+                pickle.dump(creds, f)
 
     service = build('gmail', 'v1', credentials=creds)
     return service
@@ -80,6 +110,7 @@ def extract_subject_body_from_msg(msg: Dict) -> Tuple[str, str]:
         body = msg.get("snippet", "")
 
     return subject, body
+
 def enable_watch():
     service = get_gmail_service()
     topic = os.getenv("PUBSUB_TOPIC")  # Uses .env—NO HARDCODE
