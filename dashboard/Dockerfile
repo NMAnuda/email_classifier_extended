@@ -1,19 +1,19 @@
-# Use debian-based Node (glibc for LightningCSS compatibility—no alpine musl issues)
+# Use debian-based Node (glibc for LightningCSS—avoids alpine musl issues)
 FROM node:20
 
 WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
-RUN npm ci --include=dev  # Fixed: Include devDeps for Tailwind build (LightningCSS needs it)
+RUN npm ci --include=dev  # Include dev for Tailwind/LightningCSS during build
 
 # Copy code
 COPY . .
 
-# Build for prod (Tailwind processes)
+# Build for prod (Tailwind processes globals.css)
 RUN npm run build
 
 EXPOSE 3000
 
-# Start (prod mode skips devDeps)
+# Start prod (omits devDeps)
 CMD ["npm", "start"]
