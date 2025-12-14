@@ -1,7 +1,14 @@
-import type { NextConfig } from "next";
-
-const nextConfig: NextConfig = {
-  /* config options here */
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  experimental: {
+    turbo: {
+      rules: {
+        '*.css': {
+          loaders: ['postcss-loader'],
+        },
+      },
+    },
+  },
 };
 
-export default nextConfig;
+module.exports = nextConfig;
