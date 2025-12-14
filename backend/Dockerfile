@@ -39,4 +39,4 @@ EXPOSE 8000
 
 # Start the app with gunicorn
 # Use 'python -m gunicorn' for maximum compatibility in slim images
-CMD ["python", "-m", "gunicorn", "-w", "4", "-b", "0.0.0.0:8000", "app.main:app"]
+CMD ["/usr/local/bin/gunicorn", "-w 1", "-b 0.0.0.0:8000", "app.main:app"]

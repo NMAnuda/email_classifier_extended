@@ -8,18 +8,25 @@ from email.message import EmailMessage
 import base64
 from dotenv import load_dotenv
 from typing import List
-from app.services import gmail_service, classifier as clf_module, parser
+from app.services import gmail_service, parser
 from app.database.db import SessionLocal, init_db, save_email_record, EmailRecord  # Single import
 import requests  # For OpenAI
 import re  # For clean_markdown
 import time  # For retry sleep
 import json, base64  # For notifications decode
+from functools import lru_cache  # New: For lazy classifier
 load_dotenv()
 
 bp = Blueprint('email', __name__, url_prefix='/api/email')
 
 # Ensure DB tables exist
 init_db()
+
+# Lazy load classifier (init on first call, cache for reuse—fixes OOM)
+@lru_cache(maxsize=1)
+def get_classifier():
+    from app.services.classifier import classifier
+    return classifier
 
 def extract_addresses(msg: Dict) -> Tuple[str, str]:
     """Helper: Extract From/To from headers."""
@@ -56,7 +63,7 @@ def pull_and_process():
                 from_addr, to_addr = extract_addresses(msg)
 
                 # Classify (unpack 4 values if sentiment enabled; fallback to 2)
-                results_classify = clf_module.classifier.predict_with_confidence([cleaned])
+                results_classify = get_classifier().predict_with_confidence([cleaned])  # Fixed: Lazy load
                 if results_classify and len(results_classify) > 0:
                     result = results_classify[0]
                     if len(result) == 4:
@@ -368,7 +375,7 @@ def process_new_emails(history_id):
                 from_addr, to_addr = extract_addresses(full_msg)
 
                 # Classify (unpack 4 values if sentiment enabled; fallback to 2)
-                results_classify = clf_module.classifier.predict_with_confidence([cleaned])
+                results_classify = get_classifier().predict_with_confidence([cleaned])  # Fixed: Lazy load
                 if results_classify and len(results_classify) > 0:
                     result = results_classify[0]
                     if len(result) == 4:
@@ -399,21 +406,22 @@ def process_new_emails(history_id):
                     'type': 'inbox'
                 }, broadcast=True)
 
-                # Auto-reply for repliable
+                # Auto-reply for repliable (Fixed: Use env URL for self-calls)
                 if pred_label in ['business', 'personal', 'education', 'ham', 'social'] and confidence > 0.7:
+                    api_url = os.getenv('BACKEND_URL', 'http://localhost:8000')  # Fixed: Env for prod
                     reply_data = {
                         'email_text': f"{subject}\n\n{body}",
                         'label': pred_label,
                         'confidence': confidence
                     }
-                    draft_res = requests.post('http://localhost:8000/api/email/reply', json=reply_data).json()
+                    draft_res = requests.post(f"{api_url}/api/email/reply", json=reply_data).json()
                     if 'draft' in draft_res:
                         send_data = {
                             'message_id': msg_id,
                             'draft_text': draft_res['draft'],
                             'subject': subject
                         }
-                        send_res = requests.post('http://localhost:8000/api/email/send_reply', json=send_data).json()
+                        send_res = requests.post(f"{api_url}/api/email/send_reply", json=send_data).json()
                         if send_res.get('success'):
                             print(f"📤 Auto-replied to {subject}")
 

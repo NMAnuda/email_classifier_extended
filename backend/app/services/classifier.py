@@ -4,6 +4,11 @@ from transformers import pipeline
 import torch
 import numpy as np
 import warnings  # New: Suppress deprecation
+from functools import lru_cache
+
+@lru_cache(maxsize=1)
+def get_global_classifier():
+    return EmailClassifier()  # Lazy init
 
 warnings.filterwarnings("ignore", message="clean_up_tokenization_spaces")  # Fixed: Suppress warning
 
