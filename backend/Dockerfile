@@ -40,6 +40,5 @@ RUN python -c "from transformers import pipeline; pipeline('zero-shot-classifica
 # Expose port
 EXPOSE 8000
 
-# Start the app with gunicorn
-# Use 'python -m gunicorn' for maximum compatibility in slim images
-CMD ["python", "-m", "gunicorn", "-w", "1", "-b", "0.0.0.0:8000", "app.main:app"]  # Fixed: 1 worker for OOM
+# Fixed: Clean exec form CMD (no trailing comma, 1 worker for OOM)
+CMD ["python", "-m", "gunicorn", "app.main:app", "--workers", "1", "--bind", "0.0.0.0:8000"]
