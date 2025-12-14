@@ -20,7 +20,10 @@ bp = Blueprint('email', __name__, url_prefix='/api/email')
 
 # Ensure DB tables exist
 init_db()
+from flask_jwt_extended import jwt_required  # Add import
 
+
+    # Existing code...
 def extract_addresses(msg: Dict) -> Tuple[str, str]:
     """Helper: Extract From/To from headers."""
     headers = msg.get('payload', {}).get('headers', [])
@@ -29,6 +32,7 @@ def extract_addresses(msg: Dict) -> Tuple[str, str]:
     return from_addr, to_addr
 
 @bp.route('/pull', methods=['GET'])
+@jwt_required() 
 def pull_and_process():
     """
     Pull recent INBOX messages from Gmail (received only), classify, store in DB, and return processed items.

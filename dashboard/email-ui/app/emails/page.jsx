@@ -5,6 +5,21 @@ import axios from "axios";
 import { Mail, Inbox, Send as SendIcon, RefreshCw, AlertCircle, Briefcase, BarChart3 } from "lucide-react";
 import EmailGroup from "./EmailGroup";
 
+// At top of EmailsPage component:
+useEffect(() => {
+  const token = localStorage.getItem('token');
+  if (!token) {
+    router.push('/login');
+    return;
+  }
+  // Attach to axios (global interceptor)
+  axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+}, [router]);
+
+// In fetchEmails:
+const res = await axios.get(`${API_URL}/api/email/${endpoint}?limit=20`, {
+  headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+});
 // StatCard Component
 function StatCard({ label, value, icon: Icon, color }) {
   return (
