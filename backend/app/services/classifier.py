@@ -6,14 +6,14 @@ CANDIDATE_LABELS = ["business", "personal", "promotions", "spam", "education"]
 
 class EmailClassifier:
     def __init__(self):
-        # Lightweight zero-shot model
+        # Smaller zero-shot model (~250MB)
         self.classifier = pipeline(
             "zero-shot-classification",
-            model="distilbart-mnli-12-1",  # ~250MB
+            model="distilbart-mnli-12-1",  # lightweight
             device=-1,
             return_all_scores=True
         )
-        # Lightweight sentiment model
+        # Smaller sentiment model (~250MB)
         self.sentiment = pipeline(
             "sentiment-analysis",
             model="distilbert-base-uncased-finetuned-sst-2-english",
