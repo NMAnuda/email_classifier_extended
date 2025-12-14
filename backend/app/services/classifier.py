@@ -1,64 +1,49 @@
-import os
-from typing import List, Tuple
 from transformers import pipeline
-import torch
-import numpy as np
+from typing import List, Tuple
 
-# Your groups (customize as needed)
-CANDIDATE_LABELS = [
-    "business", "personal", "promotions", "spam", "education"
-]
+# Candidate labels
+CANDIDATE_LABELS = ["business", "personal", "promotions", "spam", "education"]
 
 class EmailClassifier:
     def __init__(self):
+        # Lightweight zero-shot model
         self.classifier = pipeline(
             "zero-shot-classification",
-            model="facebook/bart-large-mnli",  # Real pre-trained on massive real text
-            device=0 if torch.cuda.is_available() else -1,  # GPU if available
-            return_all_scores=True  # For confidence
+            model="distilbart-mnli-12-1",  # ~250MB
+            device=-1,
+            return_all_scores=True
         )
-        # New: Sentiment pipeline (RoBERTa for email-like text)
+        # Lightweight sentiment model
         self.sentiment = pipeline(
             "sentiment-analysis",
-            model="cardiffnlp/twitter-roberta-base-sentiment-latest",  # Accurate for short text
-            device=0 if torch.cuda.is_available() else -1
+            model="distilbert-base-uncased-finetuned-sst-2-english",
+            device=-1
         )
 
     def predict(self, texts: List[str]) -> List[str]:
         if not texts:
             return ["Unknown"] * len(texts)
         results = self.classifier(texts, CANDIDATE_LABELS)
-        return [r['labels'][0] for r in results]  # Top label
+        return [r['labels'][0] for r in results]
 
     def predict_with_confidence(self, texts: List[str]) -> List[Tuple[str, float, str, str]]:
-        """
-        Returns (label, confidence, sentiment, priority).
-        Sentiment: positive/neutral/negative.
-        Priority: low/medium/high (high for negative, low for positive).
-        """
         if not texts:
             return [("Unknown", 1.0, "neutral", "medium")] * len(texts)
         results = self.classifier(texts, CANDIDATE_LABELS)
         preds = []
-        for r in results:
+        for i, r in enumerate(results):
             label = r['labels'][0]
-            confidence = max(r['scores'])  # Max score across labels
-
-            # New: Sentiment analysis
-            sent_result = self.sentiment(texts[results.index(r)])[0]  # Match text
-            sentiment = sent_result['label'].lower()  # positive/neutral/negative
+            confidence = max(r['scores'])
+            sent_result = self.sentiment(texts[i])[0]
+            sentiment = sent_result['label'].lower()
             score = sent_result['score']
-
-            # New: Priority scoring (custom logic)
             priority = "medium"
             if sentiment == "negative" and score > 0.7:
-                priority = "high"  # Urgent (red)
+                priority = "high"
             elif sentiment == "positive" and score > 0.7:
-                priority = "low"  # Routine (green)
-
+                priority = "low"
             preds.append((label, confidence, sentiment, priority))
         return preds
 
-
-# Default instance
+# Singleton instance
 classifier = EmailClassifier()
