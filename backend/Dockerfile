@@ -1,35 +1,45 @@
-# Multi-stage: Build heavy deps in first stage, slim runtime in second
+# -------------------------------
+# Stage 1: Build heavy deps
+# -------------------------------
 FROM python:3.12-slim as builder
 
 WORKDIR /app
 
-# Install system deps
+# Install system dependencies needed for building packages
 RUN apt-get update && apt-get install -y \
     gcc \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy & install deps
+# Copy requirements and install into a separate folder
 COPY requirements.txt .
-# CPU-only for torch (extra index—falls back to PyPI)
 ENV PIP_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cpu
 RUN pip install --no-cache-dir --target=/install -r requirements.txt
 
-# Final slim stage
+# -------------------------------
+# Stage 2: Slim runtime
+# -------------------------------
 FROM python:3.12-slim
 
 WORKDIR /app
 
-# Copy installed deps from builder
+# Copy installed dependencies from builder
 COPY --from=builder /install /usr/local/lib/python3.12/site-packages
-COPY --from=builder /usr/local/bin /usr/local/bin  # Bin for tools
 
-# Copy app code
+# Copy executables from builder (bin dir for tools)
+COPY --from=builder /usr/local/bin /usr/local/bin
+
+# Install gunicorn in final stage (no chmod needed)
+RUN pip install --no-cache-dir gunicorn==21.2.0
+
+# Copy your application code
 COPY . .
 
-# Optional: Pre-download models (speeds startup, ~2GB load)
+# Optional: Pre-download models to reduce startup time
 RUN python -c "from transformers import pipeline; pipeline('zero-shot-classification', model='facebook/bart-large-mnli')"
 
+# Expose port
 EXPOSE 8000
 
-# Fixed: Use python -m gunicorn (module run—no bin PATH issue, 1 worker for RAM)
-CMD ["python", "-m", "gunicorn", "app.main:app", "--workers=1", "--bind=0.0.0.0:8000"]
+# Start the app with gunicorn
+# Use 'python -m gunicorn' for maximum compatibility in slim images
+CMD ["python", "-m", "gunicorn", "-w", "1", "-b", "0.0.0.0:8000", "app.main:app"]  # Fixed: 1 worker for OOM
