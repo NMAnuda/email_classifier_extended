@@ -1,32 +1,27 @@
 from flask import Flask
-from flask_socketio import SocketIO, emit
+from flask_socketio import SocketIO, emit  # For SocketIO
 from app.routers import email_router
 from flask_cors import CORS
 from app.services.gmail_service import enable_watch
 import os
-from functools import lru_cache  # New: For lazy model load
 
+# Disable TensorFlow warnings (for Transformers)
 os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-prod')
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-prod')  # Fixed: Env for security
+
+# CORS: Specific origins (env for prod, localhost for dev)
 cors_origins = os.getenv('FLASK_CORS_ORIGINS', 'http://localhost:3000')
 CORS(app, origins=cors_origins)
-socketio = SocketIO(app, cors_allowed_origins=cors_origins)
+
+# SocketIO: Specific origins (secure—no "*")
+socketio = SocketIO(app, cors_allowed_origins=cors_origins)  # Matches CORS
 
 app.register_blueprint(email_router.bp)
 
-# Enable watch
+# Enable Gmail watch
 enable_watch()
 
-# Lazy load classifier (init on first call, cache for reuse)
-@lru_cache(maxsize=1)
-def get_classifier():
-    from app.services.classifier import classifier
-    return classifier
-
-# Update router calls to use get_classifier() instead of clf_module.classifier
-# (In email_router.py, replace clf_module.classifier with get_classifier())
-
 if __name__ == '__main__':
-    socketio.run(app, debug=os.getenv('FLASK_DEBUG', 'False').lower() == 'true', host='0.0.0.0', port=int(os.getenv('PORT', 8000)), workers=1)  # Fixed: 1 worker for RAM
+    socketio.run(app, debug=os.getenv('FLASK_DEBUG', 'False').lower() == 'true', host='0.0.0.0', port=int(os.getenv('PORT', 8000)))
