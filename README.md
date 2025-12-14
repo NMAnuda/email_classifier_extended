@@ -1,6 +1,6 @@
 # AI Email Classifier: Extended Smart Inbox Assistant(CI/CD)
 
-![](./screenshot/image3.png)
+![](./screenshot/image_3.png)
 
 ## Overview
 
