@@ -16,8 +16,7 @@ cors_origins = os.getenv('FLASK_CORS_ORIGINS', 'http://localhost:3000')
 CORS(app, origins=cors_origins)
 
 # SocketIO: Specific origins (secure—no "*")
-socketio = SocketIO(app, cors_allowed_origins=cors_origins)  # Matches CORS
-
+socketio = SocketIO(app, cors_allowed_origins=cors_origins, async_mode='threading')
 app.register_blueprint(email_router.bp)
 
 # Enable Gmail watch
