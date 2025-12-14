@@ -25,9 +25,6 @@ WORKDIR /app
 # Copy installed dependencies from builder
 COPY --from=builder /install /usr/local/lib/python3.12/site-packages
 
-# Copy executables from builder (bin dir for tools)
-COPY --from=builder /usr/local/bin /usr/local/bin
-
 # Install gunicorn in final stage (no chmod needed)
 RUN pip install --no-cache-dir gunicorn==21.2.0
 
@@ -40,5 +37,6 @@ RUN python -c "from transformers import pipeline; pipeline('zero-shot-classifica
 # Expose port
 EXPOSE 8000
 
-# Fixed: Clean exec form CMD (no trailing comma, 1 worker for OOM)
-CMD ["python", "-m", "gunicorn", "app.main:app", "--workers", "1", "--bind", "0.0.0.0:8000"]
+# Start the app with gunicorn
+# Use 'python -m gunicorn' for maximum compatibility in slim images
+CMD ["python", "-m", "gunicorn", "-w", "4", "-b", "0.0.0.0:8000", "app.main:app"]
