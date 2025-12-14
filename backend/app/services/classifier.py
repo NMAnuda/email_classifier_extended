@@ -15,13 +15,15 @@ class EmailClassifier:
             "zero-shot-classification",
             model="facebook/bart-large-mnli",  # Real pre-trained on massive real text
             device=0 if torch.cuda.is_available() else -1,  # GPU if available
-            return_all_scores=True  # For confidence
+            return_all_scores=True,  # For confidence
+            clean_up_tokenization_spaces=True  # Fixed: Explicit to suppress FutureWarning (deprecated default)
         )
         # New: Sentiment pipeline (RoBERTa for email-like text)
         self.sentiment = pipeline(
             "sentiment-analysis",
             model="cardiffnlp/twitter-roberta-base-sentiment-latest",  # Accurate for short text
-            device=0 if torch.cuda.is_available() else -1
+            device=0 if torch.cuda.is_available() else -1,
+            clean_up_tokenization_spaces=True  # Fixed: Explicit for consistency (suppresses warning)
         )
 
     def predict(self, texts: List[str]) -> List[str]:
@@ -40,12 +42,12 @@ class EmailClassifier:
             return [("Unknown", 1.0, "neutral", "medium")] * len(texts)
         results = self.classifier(texts, CANDIDATE_LABELS)
         preds = []
-        for r in results:
+        for i, r in enumerate(results):
             label = r['labels'][0]
             confidence = max(r['scores'])  # Max score across labels
 
             # New: Sentiment analysis
-            sent_result = self.sentiment(texts[results.index(r)])[0]  # Match text
+            sent_result = self.sentiment(texts[i])[0]  # Match text by index (fixed: avoid index lookup error)
             sentiment = sent_result['label'].lower()  # positive/neutral/negative
             score = sent_result['score']
 
