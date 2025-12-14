@@ -5,7 +5,7 @@ import axios from "axios";
 import { Mail, Inbox, Send as SendIcon, RefreshCw, AlertCircle, Briefcase, BarChart3 } from "lucide-react";
 import EmailGroup from "./EmailGroup";
 
-// Fixed: StatCard component (was missing or out of scope)
+// StatCard Component
 function StatCard({ label, value, icon: Icon, color }) {
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow">
@@ -23,65 +23,50 @@ function StatCard({ label, value, icon: Icon, color }) {
 }
 
 export default function EmailsPage() {
-  const [emails, setEmails] = useState([]);  // Inbox (received)
-  const [sentEmails, setSentEmails] = useState([]);  // Sent (your replies)
+  const [emails, setEmails] = useState([]);       // Inbox
+  const [sentEmails, setSentEmails] = useState([]); // Sent
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);  // New: Error state
-  const [activeTab, setActiveTab] = useState('inbox');  // Default: Inbox
+  const [error, setError] = useState(null);
+  const [activeTab, setActiveTab] = useState('inbox');
 
-  const timeoutRef = useRef(null);  // Ref for debounce timeout
+  const timeoutRef = useRef(null);
+
+  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
 
   const fetchEmails = async (type = 'inbox') => {
     try {
       setLoading(true);
-      setError(null);  // Clear error
+      setError(null);
       const endpoint = type === 'sent' ? 'sent' : 'pull';
-      const res = await axios.get(`http://localhost:8000/api/email/${endpoint}?limit=20`);
-      if (type === 'inbox') {
-        setEmails(res.data);
-      } else {
-        setSentEmails(res.data);
-      }
+      const res = await axios.get(`${backendUrl}/api/email/${endpoint}?limit=20`);
+      if (type === 'inbox') setEmails(res.data);
+      else setSentEmails(res.data);
     } catch (error) {
       console.error(`Failed to fetch ${type}:`, error);
-      setError(`Network error fetching ${type}: ${error.message}. Check if backend is running on port 8000.`);
-      alert(error.message.includes('Network Error') ? 'Backend not reachable—start Flask server on port 8000.' : error.message);
+      setError(`Network error fetching ${type}: ${error.message}. Check backend service.`);
     } finally {
       setLoading(false);
     }
   };
 
-  // Debounced refresh (prevents flood on fast clicks)
   const refreshCurrent = useCallback((type) => {
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-    }
-    timeoutRef.current = setTimeout(() => fetchEmails(type), 300);  // 300ms debounce
-  }, [fetchEmails]);
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    timeoutRef.current = setTimeout(() => fetchEmails(type), 300);
+  }, []);
 
-  // Initial fetch + auto-refresh every 30s
   useEffect(() => {
-    // Initial fetch for current tab only
     fetchEmails(activeTab);
 
-    // Auto-refresh current tab every 30s (real-time)
-    const interval = setInterval(() => {
-      fetchEmails(activeTab);
-    }, 30000);  // 30s—adjust to 10000 for 10s
+    const interval = setInterval(() => fetchEmails(activeTab), 30000); // Auto-refresh every 30s
 
-    // Cleanup
     return () => {
       clearInterval(interval);
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
-  }, [activeTab]);  // Re-run on tab switch
+  }, [activeTab]);
 
-  // Manual refresh
   const handleRefresh = () => refreshCurrent(activeTab);
 
-  // Group emails by label (per tab)
   const groupedEmails = (emailsList) => emailsList.reduce((acc, email) => {
     const label = email.predicted_label || "Unknown";
     acc[label] = acc[label] || [];
@@ -92,19 +77,12 @@ export default function EmailsPage() {
   const inboxGroups = groupedEmails(emails);
   const sentGroups = groupedEmails(sentEmails);
 
-  // Stats (Inbox only)
   const totalEmails = emails.length;
   const spamCount = emails.filter(e => e.predicted_label === 'spam').length;
   const businessCount = emails.filter(e => e.predicted_label === 'business').length;
   const avgConfidence = emails.length > 0 
     ? (emails.reduce((sum, e) => sum + (e.confidence || 0), 0) / emails.length * 100).toFixed(1)
     : 0;
-
-  const categoryIcons = {
-    business: Briefcase,
-    spam: AlertCircle,
-    // Add more as needed
-  };
 
   const currentEmails = activeTab === 'inbox' ? emails : sentEmails;
   const currentGroups = activeTab === 'inbox' ? inboxGroups : sentGroups;
@@ -131,7 +109,7 @@ export default function EmailsPage() {
             </button>
           </div>
 
-          {/* Tabs: Inbox/Sent */}
+          {/* Tabs */}
           <div className="flex border-b border-gray-200 rounded-t-lg overflow-hidden">
             {['inbox', 'sent'].map((tab) => (
               <button
@@ -163,7 +141,7 @@ export default function EmailsPage() {
 
         {currentEmails.length > 0 && (
           <>
-            {/* Statistics Cards (Inbox only) */}
+            {/* Stats */}
             {showStats && (
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
                 <StatCard label="Total Emails" value={totalEmails} icon={Inbox} color="bg-blue-50 text-blue-600" />
@@ -180,7 +158,7 @@ export default function EmailsPage() {
                   key={topic} 
                   topic={topic.charAt(0).toUpperCase() + topic.slice(1)} 
                   emails={topicEmails}
-                  icon={Mail}  // Default
+                  icon={Mail}
                 />
               ))}
             </div>

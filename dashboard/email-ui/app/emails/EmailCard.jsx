@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Tag from "./Tag";
-import { Mail, ChevronDown, ChevronUp, Send, X, User, Clock, Tag as TagIcon, AlertTriangle } from "lucide-react";  // Added AlertTriangle for priority
+import { Mail, ChevronDown, ChevronUp, Send, X, User, Clock, Tag as TagIcon, AlertTriangle } from "lucide-react";
 import axios from "axios";
 
 export default function EmailCard({ email, onGenerateReply }) {
@@ -12,6 +12,8 @@ export default function EmailCard({ email, onGenerateReply }) {
   const [replyDraft, setReplyDraft] = useState('');
   const [replyLoading, setReplyLoading] = useState(false);
   const [sendLoading, setSendLoading] = useState(false);
+
+  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
 
   const previewBody = email.body 
     ? email.body.substring(0, 120) + (email.body.length > 120 ? '...' : '') 
@@ -26,7 +28,6 @@ export default function EmailCard({ email, onGenerateReply }) {
     && (email.confidence || 0) >= 0.7
     && email.from !== email.to;
 
-  // New: Priority badge based on sentiment
   const getPriorityBadge = () => {
     const priority = email.priority || 'medium';
     const sentiment = email.sentiment || 'neutral';
@@ -49,7 +50,7 @@ export default function EmailCard({ email, onGenerateReply }) {
   const generateReply = async () => {
     setReplyLoading(true);
     try {
-      const response = await axios.post('http://localhost:8000/api/email/reply', {
+      const response = await axios.post(`${backendUrl}/api/email/reply`, {
         email_text: `${email.subject}\n\n${email.body}`,
         label: email.predicted_label,
         confidence: email.confidence
@@ -61,28 +62,25 @@ export default function EmailCard({ email, onGenerateReply }) {
       if (onGenerateReply) onGenerateReply(email.message_id);
     } catch (error) {
       console.error('Reply generation failed:', error);
-      alert('Failed to generate reply. Please check your API connection.');
+      alert('Failed to generate reply. Check backend connection.');
     } finally {
       setReplyLoading(false);
     }
   };
 
   const sendReply = async () => {
-    if (!replyDraft.trim()) {
-      alert('Draft is empty—add a message first!');
-      return;
-    }
+    if (!replyDraft.trim()) return alert('Draft is empty—add a message first!');
 
     setSendLoading(true);
     try {
-      const response = await axios.post('http://localhost:8000/api/email/send_reply', {
+      const response = await axios.post(`${backendUrl}/api/email/send_reply`, {
         message_id: email.message_id,
         draft_text: replyDraft,
         subject: email.subject
       });
 
       if (response.data.success) {
-        alert(`Reply sent successfully! (ID: ${response.data.message_id})`);
+        alert(`Reply sent successfully!`);
         setShowReplyModal(false);
         setReplyDraft('');
         if (onGenerateReply) onGenerateReply(email.message_id, true);
@@ -118,12 +116,7 @@ export default function EmailCard({ email, onGenerateReply }) {
                   <span>To: {email.to || 'You'}</span>
                 </div>
               </div>
-              {/* New: Sentiment Priority Badge */}
-              {email.sentiment && (
-                <div className="ml-7 mt-1">
-                  {getPriorityBadge()}
-                </div>
-              )}
+              {email.sentiment && <div className="ml-7 mt-1">{getPriorityBadge()}</div>}
             </div>
             <Tag label={email.predicted_label} confidence={email.confidence} />
           </div>
@@ -139,17 +132,7 @@ export default function EmailCard({ email, onGenerateReply }) {
             onClick={() => setShowBody(!showBody)}
             className="flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors"
           >
-            {showBody ? (
-              <>
-                <ChevronUp className="w-4 h-4" />
-                Hide Details
-              </>
-            ) : (
-              <>
-                <ChevronDown className="w-4 h-4" />
-                View Details
-              </>
-            )}
+            {showBody ? (<><ChevronUp className="w-4 h-4" />Hide Details</>) : (<><ChevronDown className="w-4 h-4" />View Details</>)}
           </button>
 
           <div className="flex items-center gap-2">
@@ -174,18 +157,14 @@ export default function EmailCard({ email, onGenerateReply }) {
         {showBody && (
           <div className="border-t border-gray-100 bg-gray-50">
             <div className="p-4 space-y-3">
-              {/* Summary Section */}
               <div className="bg-white rounded-lg p-4 border border-gray-200">
                 <div className="flex items-center gap-2 mb-2">
                   <TagIcon className="w-4 h-4 text-blue-600" />
                   <h3 className="text-sm font-semibold text-gray-900">Summary</h3>
                 </div>
-                <p className="text-gray-700 text-sm leading-relaxed">
-                  {summaryBody}
-                </p>
+                <p className="text-gray-700 text-sm leading-relaxed">{summaryBody}</p>
               </div>
 
-              {/* Full Body Toggle */}
               {email.body && email.body.length > 200 && (
                 <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
                   <button
@@ -193,23 +172,16 @@ export default function EmailCard({ email, onGenerateReply }) {
                     className="w-full px-4 py-3 flex items-center justify-between text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
                   >
                     <span>Full Message Content</span>
-                    {showFullBody ? (
-                      <ChevronUp className="w-4 h-4" />
-                    ) : (
-                      <ChevronDown className="w-4 h-4" />
-                    )}
+                    {showFullBody ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                   </button>
                   {showFullBody && (
                     <div className="px-4 pb-4 pt-2 border-t border-gray-100 max-h-64 overflow-y-auto">
-                      <p className="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap break-words">
-                        {email.body}
-                      </p>
+                      <p className="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap break-words">{email.body}</p>
                     </div>
                   )}
                 </div>
               )}
 
-              {/* ML Cleaned Text */}
               {email.cleaned_text && (
                 <div className="bg-white rounded-lg p-4 border border-gray-200">
                   <div className="flex items-center gap-2 mb-2">
@@ -217,8 +189,7 @@ export default function EmailCard({ email, onGenerateReply }) {
                     <h3 className="text-sm font-semibold text-gray-900">Processed Text</h3>
                   </div>
                   <p className="text-gray-600 text-xs leading-relaxed font-mono max-h-24 overflow-auto">
-                    {email.cleaned_text.substring(0, 300)}
-                    {email.cleaned_text.length > 300 ? '...' : ''}
+                    {email.cleaned_text.substring(0, 300)}{email.cleaned_text.length > 300 ? '...' : ''}
                   </p>
                 </div>
               )}
@@ -234,15 +205,10 @@ export default function EmailCard({ email, onGenerateReply }) {
             <div className="flex items-center justify-between p-6 border-b border-gray-200">
               <div>
                 <h3 className="text-lg font-semibold text-gray-900">Reply Draft</h3>
-                <p className="text-sm text-gray-500 mt-1">
-                  Re: {email.subject || "(No Subject)"}
-                </p>
+                <p className="text-sm text-gray-500 mt-1">Re: {email.subject || "(No Subject)"}</p>
               </div>
               <button 
-                onClick={() => {
-                  setShowReplyModal(false);
-                  setReplyDraft('');
-                }}
+                onClick={() => { setShowReplyModal(false); setReplyDraft(''); }}
                 className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-lg hover:bg-gray-100"
               >
                 <X className="w-5 h-5" />
@@ -260,10 +226,7 @@ export default function EmailCard({ email, onGenerateReply }) {
 
             <div className="flex items-center justify-end gap-3 px-6 py-4 bg-gray-50 border-t border-gray-200 rounded-b-xl">
               <button
-                onClick={() => {
-                  setShowReplyModal(false);
-                  setReplyDraft('');
-                }}
+                onClick={() => { setShowReplyModal(false); setReplyDraft(''); }}
                 className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors"
               >
                 Discard
