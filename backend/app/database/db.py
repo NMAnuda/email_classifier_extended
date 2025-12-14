@@ -3,7 +3,7 @@ from datetime import datetime
 from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, Float
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import QueuePool  # New: For larger pool
+from sqlalchemy.pool import QueuePool  # For larger pool
 
 DB_FILE = os.path.join(os.path.dirname(__file__), "..", "..", "data", "emails.db")
 os.makedirs(os.path.dirname(DB_FILE), exist_ok=True)
@@ -34,6 +34,15 @@ class EmailRecord(Base):
     predicted_label = Column(String(128), nullable=True)
     confidence = Column(Float, nullable=True)
     timestamp = Column(DateTime, default=datetime.utcnow)
+
+
+# New: User model for auth/register/login (email unique, hashed password)
+class User(Base):
+    __tablename__ = "users"
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String(256), unique=True, nullable=False)
+    password_hash = Column(String(256), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
 
 
 def init_db():
