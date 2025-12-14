@@ -3,6 +3,10 @@ from typing import Tuple
 from app.utils.preprocee import clean_text
 import re
 from difflib import SequenceMatcher  # For dedup similarity
+import nltk
+
+# Ensure punkt tokenizer is available
+nltk.download('punkt', quiet=True)
 
 def extract_text(subject: str, body: str) -> Tuple[str, str]:
     """
