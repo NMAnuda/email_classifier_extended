@@ -25,14 +25,18 @@ WORKDIR /app
 # Copy installed dependencies from builder
 COPY --from=builder /install /usr/local/lib/python3.12/site-packages
 
-# Install gunicorn in final stage
+# Install gunicorn in final stage (no chmod needed)
 RUN pip install --no-cache-dir gunicorn==21.2.0
 
-# Copy application code
+# Copy your application code
 COPY . .
+
+# Optional: Pre-download models to reduce startup time
+RUN python -c "from transformers import pipeline; pipeline('zero-shot-classification', model='facebook/bart-large-mnli')"
 
 # Expose port
 EXPOSE 8000
 
-# Gunicorn: 1 worker to avoid out-of-memory
+# Start the app with gunicorn
+# Use 'python -m gunicorn' for maximum compatibility in slim images
 CMD ["python", "-m", "gunicorn", "-w", "1", "--threads", "2", "-b", "0.0.0.0:8000", "app.main:app"]
