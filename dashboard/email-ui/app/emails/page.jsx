@@ -38,7 +38,7 @@ export default function EmailsPage() {
       setLoading(true);
       setError(null);
       const endpoint = type === 'sent' ? 'sent' : 'pull';
-      const res = await axios.get(`${backendUrl}/api/email/${endpoint}?limit=1`);
+      const res = await axios.get(`${backendUrl}/api/email/${endpoint}?limit=15`);
       if (type === 'inbox') setEmails(res.data);
       else setSentEmails(res.data);
     } catch (error) {
