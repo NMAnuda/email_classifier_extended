@@ -9,7 +9,7 @@ os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key'  # New: For SocketIO
-CORS(app)
+CORS(app, origins=os.getenv('FLASK_CORS_ORIGINS', 'http://localhost:3000'))
 socketio = SocketIO(app, cors_allowed_origins="*")  # New: SocketIO instance
 
 app.register_blueprint(email_router.bp)
